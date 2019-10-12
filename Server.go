@@ -3,19 +3,30 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	//"math/rand"
 )
 
+type player struct {
+	name string
+}
+type gamestate struct {
+	gameID  string
+	players []player
+	stocks  []stock
+}
+
+//Prices in integer cents to avoid floating point comparisons etc.
 type stock struct {
 	name      string
-	price     float64
+	price     int
 	numShares int
 }
 
 // Directly changes the price of a stock
-func (s *stock) changePrice(price float64) {
+func (s *stock) changePrice(price int) {
 	s.price = price
 }
 
@@ -28,20 +39,20 @@ func (s *stock) changeName(name string) {
 func (s *stock) changeShares(shares int) {
 	s.numShares = shares
 }
-
-func main() {
-	jame := stock{
-		"corn",
-		float64(3.5),
-		3,
+func (s *stock) waitAndChange() {
+	for {
+		time.Sleep(2 * time.Second)
+		s.price += 3
 	}
-	fmt.Print(jame.price)
-	jame.changePrice(float64(99.20))
-	fmt.Print(jame.price)
+}
+func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Welcome to my website!")
+		fmt.Fprintf(w, fmt.Sprint(jame.price))
 	})
 	http.Handle("/", r)
+	// Go keyword launches the function in another thread
 	http.ListenAndServe(":8090", nil)
 }
+
+// Need multithreading to change state asynchronoously

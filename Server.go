@@ -48,7 +48,7 @@ func (s *stock) waitAndChange() {
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, fmt.Sprint(jame.price))
+		fmt.Fprintf(w, "Welcome")
 	})
 	http.Handle("/", r)
 	// Go keyword launches the function in another thread

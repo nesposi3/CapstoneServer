@@ -11,7 +11,7 @@ import (
 )
 
 type dividend struct {
-	boughtStock stock
+	boughtStock *stock
 	name        string
 	numShares   int
 }
@@ -19,13 +19,13 @@ type dividend struct {
 type player struct {
 	name         string
 	deleted      bool
-	passwordHash int
-	portfolio    []dividend
+	passwordHash string
+	portfolio    []*dividend
 }
 type gamestate struct {
 	gameID     string
-	players    []player
-	stocks     []stock
+	players    []*player
+	stocks     []*stock
 	tickLength int
 }
 
@@ -71,7 +71,8 @@ func (s *stock) changePrice(price int) {
 
 // Change the price by change/1000
 func (s *stock) changePriceByPermill(change int) {
-	newPrice := int(math.Round(float64(s.price) * (float64(change) / 1000.0)))
+	changeInPrice := int(math.Round(float64(s.price) * (float64(change) / 1000.0)))
+	newPrice := s.price + changeInPrice
 	s.changePrice(newPrice)
 }
 
@@ -87,7 +88,7 @@ func (s *stock) changeShares(shares int) {
 
 // TODO Adjust numbers
 func (s *stock) statisticalUpdate() {
-
+	old := s.price
 	// First phase of stock adjustment, if huge change in shares bought, price changes. Change ratio in perMille
 	changeRatio := int(((float64(s.numShares) - float64(s.previousNumShares)) / float64(s.numShares)) * 1000)
 	s.changePriceByPermill(changeRatio)
@@ -109,13 +110,15 @@ func (s *stock) statisticalUpdate() {
 		// Change the trend of the stock
 		s.trend = !s.trend
 	}
+	fmt.Printf("%s: %d old %d new\n", s.name, old, s.price)
+
 }
 func (s *stock) equals(other stock) bool {
 	return (s.name == other.name)
 }
 
 //Adds a player to the game
-func (game *gamestate) addPlayer(newPlayer player) {
+func (game *gamestate) addPlayer(newPlayer *player) {
 	game.players = append(game.players, newPlayer)
 }
 func (game *gamestate) updateStocks() {
@@ -123,11 +126,14 @@ func (game *gamestate) updateStocks() {
 		s.statisticalUpdate()
 	}
 }
-func waitAndUpdate(gameList []gamestate) {
-	time.Sleep(time.Minute)
-	for _, game := range gameList {
-		game.updateStocks()
+func waitAndUpdate(gameList []*gamestate) {
+	for {
+		time.Sleep(3 * time.Second)
+		for _, game := range gameList {
+			game.updateStocks()
+		}
 	}
+
 }
 
 //Sets a player to deleted state
@@ -153,6 +159,47 @@ func (game *gamestate) getNum() (int, int) {
 	return i, j
 }
 func main() {
+	corn := stock{
+		"corn",
+		5000,
+		500,
+		500,
+		true,
+	}
+	egg := stock{
+		"egg",
+		25943,
+		5000,
+		4500,
+		false,
+	}
+	p1 := dividend{
+		&corn,
+		"corn",
+		67,
+	}
+	p2 := dividend{
+		&egg,
+		"egg",
+		500,
+	}
+	port := []*dividend{&p1, &p2}
+	nick := player{
+		"nick",
+		false,
+		"dsad",
+		port,
+	}
+	plays := []*player{&nick}
+	stocks := []*stock{&egg, &corn}
+	game := gamestate{
+		"23",
+		plays,
+		stocks,
+		23,
+	}
+	gamelist := []*gamestate{&game}
+	waitAndUpdate(gamelist)
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Welcome")

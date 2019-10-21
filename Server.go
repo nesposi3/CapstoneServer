@@ -208,6 +208,18 @@ func main() {
 		vars := mux.Vars(r)
 		fmt.Printf(vars["name"])
 	})
+	r.HandleFunc("/login/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		name := vars["name"]
+		hash := vars["passHash"]
+		// Check database if username/password hash exists
+		fmt.Fprintf(w, "%s %s", name, hash)
+		if true {
+			fmt.Fprintf(w, "Success")
+		} else {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		}
+	})
 	http.Handle("/", r)
 	// Go keyword launches the function in another thread
 	http.ListenAndServe(":8090", nil)

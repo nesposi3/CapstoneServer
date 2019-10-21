@@ -163,6 +163,17 @@ func (game *gamestate) getNum() (int, int) {
 	}
 	return i, j
 }
+
+// Gets the correct gamestate pointer from a list of gamestates based on gameID
+func getGameState(id string, gameList []*gamestate) *gamestate {
+	for _, game := range gameList {
+		if game.gameID == id {
+			return game
+		}
+	}
+	return nil
+}
+
 func main() {
 	corn := stock{
 		"corn",
@@ -213,22 +224,44 @@ func main() {
 		vars := mux.Vars(r)
 		fmt.Printf(vars["name"])
 		// Write to Database
+
 	})
 	r.HandleFunc("/login/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		name := vars["name"]
 		hash := vars["passHash"]
 		// Check database if username/password hash exists. Send different error mesages for different cases.
-		fmt.Fprintf(w, "%s %s", name, hash)
-		if true {
+		if authLogin(name, hash) {
 			fmt.Fprintf(w, "Success")
 		} else {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		}
 	})
+	r.HandleFunc("/game/{gameID}/buy/{name}-{passHash}-{stockName}-{numShares}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		name := vars["name"]
+		hash := vars["passHash"]
+		gameID := vars["gameID"]
+		currGame := getGameState(gameID, gamelist)
+		if currGame == nil {
+			http.Error(w, "No Such Game", http.StatusNotFound)
+		} else if !authLogin(name, hash) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		} else {
+			//Check if User exists in game
+			fmt.Fprintf(w, "Buy")
+		}
+	})
+	r.HandleFunc("/game/{gameID}/sell/{name}-{passHash}-{stockName}-{numToSell}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		name := vars["name"]
+		hash := vars["passHash"]
+		if !authLogin(name, hash) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		} else {
+			fmt.Fprintf(w, "Buy")
+		}
+	})
 	http.Handle("/", r)
-	// Go keyword launches the function in another thread
 	http.ListenAndServe(":8090", nil)
 }
-
-// Need multithreading to change state asynchronoously

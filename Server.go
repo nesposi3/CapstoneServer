@@ -237,11 +237,13 @@ func main() {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		}
 	})
-	r.HandleFunc("/game/{gameID}/buy/{name}-{passHash}-{stockName}-{numShares}", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/game/{gameID}/{buyOrSell}/{name}-{passHash}-{stockName}-{numShares}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		name := vars["name"]
 		hash := vars["passHash"]
 		gameID := vars["gameID"]
+		// True for buy, false for sell
+		buyOrSell := (vars["buyOrSell"] == "buy")
 		currGame := getGameState(gameID, gamelist)
 		if currGame == nil {
 			http.Error(w, "No Such Game", http.StatusNotFound)
@@ -249,17 +251,12 @@ func main() {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		} else {
 			//Check if User exists in game
-			fmt.Fprintf(w, "Buy")
-		}
-	})
-	r.HandleFunc("/game/{gameID}/sell/{name}-{passHash}-{stockName}-{numToSell}", func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		name := vars["name"]
-		hash := vars["passHash"]
-		if !authLogin(name, hash) {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-		} else {
-			fmt.Fprintf(w, "Buy")
+			if buyOrSell {
+				fmt.Fprintf(w, "Buy")
+			} else {
+				fmt.Fprintf(w, "Sell")
+			}
+
 		}
 	})
 	http.Handle("/", r)

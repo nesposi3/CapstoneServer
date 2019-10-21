@@ -199,7 +199,7 @@ func main() {
 		23,
 	}
 	gamelist := []*gamestate{&game}
-	waitAndUpdate(gamelist)
+	go waitAndUpdate(gamelist)
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Welcome")

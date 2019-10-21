@@ -144,6 +144,11 @@ func (game *gamestate) removePlayer(oldPlayer player) {
 		}
 	}
 }
+func authLogin(name string, hash string) bool {
+	//Database call here
+	databaseCall := true
+	return databaseCall
+}
 
 //Returns a tuple of active and deleted players
 func (game *gamestate) getNum() (int, int) {
@@ -207,12 +212,13 @@ func main() {
 	r.HandleFunc("/register/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		fmt.Printf(vars["name"])
+		// Write to Database
 	})
 	r.HandleFunc("/login/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		name := vars["name"]
 		hash := vars["passHash"]
-		// Check database if username/password hash exists
+		// Check database if username/password hash exists. Send different error mesages for different cases.
 		fmt.Fprintf(w, "%s %s", name, hash)
 		if true {
 			fmt.Fprintf(w, "Success")

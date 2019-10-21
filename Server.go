@@ -259,6 +259,42 @@ func main() {
 
 		}
 	})
+	// Get status of all gamestate
+	r.HandleFunc("/game/{gameID}/getGameStatus/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		name := vars["name"]
+		hash := vars["passHash"]
+		gameID := vars["gameID"]
+		currGame := getGameState(gameID, gamelist)
+		if currGame == nil {
+			http.Error(w, "No Such Game", http.StatusNotFound)
+		} else if !authLogin(name, hash) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		} else {
+			//Check if User exists in game
+			fmt.Fprint(w, "Status")
+
+		}
+	})
+	r.HandleFunc("/game/{gameID}/getStockStatus/{name}-{passHash}-{stockName}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		name := vars["name"]
+		hash := vars["passHash"]
+		gameID := vars["gameID"]
+		stockName := vars["stockName"]
+
+		currGame := getGameState(gameID, gamelist)
+		if currGame == nil {
+			http.Error(w, "No Such Game", http.StatusNotFound)
+		} else if !authLogin(name, hash) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		} else {
+			//Check if User exists in game
+			fmt.Fprintf(w, "Status of %s", stockName)
+
+		}
+	})
+
 	http.Handle("/", r)
 	http.ListenAndServe(":8090", nil)
 }

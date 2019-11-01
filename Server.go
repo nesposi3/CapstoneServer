@@ -46,6 +46,8 @@ Sail air,811,1`
 
 const startingCents = 1000000
 
+var gamelist = []*gamestate{}
+
 type dividend struct {
 	boughtStock *stock
 	name        string
@@ -162,12 +164,13 @@ func (game *gamestate) updateStocks() {
 		s.statisticalUpdate()
 	}
 }
-func waitAndUpdate(gameList []*gamestate) {
+func waitAndUpdate() {
 	//TODO every iteration updates db
 	for {
 		time.Sleep(3 * time.Second)
-		for _, game := range gameList {
+		for _, game := range gamelist {
 			game.updateStocks()
+			fmt.Println(game.gameID)
 		}
 	}
 
@@ -264,7 +267,7 @@ func getInitialStocks() []*stock {
 	}
 	return stocks
 }
-func initialzeGame(games []*gamestate, user *player, gameID string) {
+func initialzeGame(games []*gamestate, user *player, gameID string) []*gamestate {
 	stocks := getInitialStocks()
 	players := []*player{user}
 	newGame := gamestate{
@@ -273,10 +276,10 @@ func initialzeGame(games []*gamestate, user *player, gameID string) {
 		stocks,
 	}
 	games = append(games, &newGame)
+	return games
 }
 
 func main() {
-	getInitialStocks()
 	sqlURL, exists := os.LookupEnv("SQL_STRING")
 	if !exists {
 		fmt.Print("Environment Variable not set")
@@ -292,6 +295,7 @@ func main() {
 		fmt.Print(err)
 		return
 	}
+
 	corn := stock{
 		"corn",
 		5000,
@@ -331,8 +335,8 @@ func main() {
 		plays,
 		stocks,
 	}
-	gamelist := []*gamestate{&game}
-	go waitAndUpdate(gamelist)
+	gamelist = append(gamelist, &game)
+	go waitAndUpdate()
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Welcome")
@@ -410,13 +414,14 @@ func main() {
 					return
 				}
 			}
-			initialzeGame(gamelist, &player{
+			newList := initialzeGame(gamelist, &player{
 				name,
 				false,
 				hash,
 				[]*dividend{},
 				startingCents,
 			}, gameID)
+			gamelist = newList
 		}
 	})
 	r.HandleFunc("/game/{gameID}/getStockStatus/{name}-{passHash}-{stockName}", func(w http.ResponseWriter, r *http.Request) {

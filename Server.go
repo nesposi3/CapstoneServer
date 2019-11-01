@@ -1,14 +1,50 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
+	"encoding/csv"
+
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 )
+
+const initial_stocks = `Cyclops Industries,31966,1
+Champion Intelligence,18803,1
+Voyage Technologies,6163,0
+Dwarf,52906,1
+Phenomenon Enterprises,46994,1
+White Wolf Sports,90973,1
+Surge Aviation,12540,0
+Turtle Co.,27772,0
+Greatechnolgies,15117,1
+Twisterecords,50189,1
+Prodintelligence,84983,0
+Solsticetems,30138,0
+Freacrosystems,62412,0
+Rootechnologies,23221,1
+Luckytronics,80268,1
+Aces,34272,1
+Nymph cast,25578,1
+Herb aid,70147,1
+Mountain stones,96694,1
+Vortex ex,96270,1
+Ghost media,472,1
+Riddle fly,1314,0
+Globe mobile,1474,1
+Tulip bit,1073,1
+Sail air,811,1`
+
+const startingCents = 1000000
 
 type dividend struct {
 	boughtStock *stock
@@ -21,12 +57,12 @@ type player struct {
 	deleted      bool
 	passwordHash string
 	portfolio    []*dividend
+	totalCash    int
 }
 type gamestate struct {
-	gameID     string
-	players    []*player
-	stocks     []*stock
-	tickLength int
+	gameID  string
+	players []*player
+	stocks  []*stock
 }
 
 //Prices in integer cents to avoid floating point comparisons etc.
@@ -88,7 +124,7 @@ func (s *stock) changeShares(shares int) {
 
 // TODO Adjust numbers
 func (s *stock) statisticalUpdate() {
-	old := s.price
+	//old := s.price
 	// First phase of stock adjustment, if huge change in shares bought, price changes. Change ratio in perMille
 	changeRatio := int(((float64(s.numShares) - float64(s.previousNumShares)) / float64(s.numShares)) * 1000)
 	s.changePriceByPermill(changeRatio)
@@ -110,7 +146,7 @@ func (s *stock) statisticalUpdate() {
 		// Change the trend of the stock
 		s.trend = !s.trend
 	}
-	fmt.Printf("%s: %d old %d new\n", s.name, old, s.price)
+	//fmt.Printf("%s: %d old %d new\n", s.name, old, s.price)
 
 }
 func (s *stock) equals(other stock) bool {
@@ -127,6 +163,7 @@ func (game *gamestate) updateStocks() {
 	}
 }
 func waitAndUpdate(gameList []*gamestate) {
+	//TODO every iteration updates db
 	for {
 		time.Sleep(3 * time.Second)
 		for _, game := range gameList {
@@ -144,9 +181,36 @@ func (game *gamestate) removePlayer(oldPlayer player) {
 		}
 	}
 }
-func authLogin(name string, hash string) bool {
+func authLogin(db *sql.DB, name string, hash string) bool {
 	//Database call here
-	databaseCall := true
+	rows, err := db.Query("SELECT name FROM users WHERE name=? AND hash=?", name, hash)
+	databaseCall := false
+	if err != nil {
+		fmt.Print(err)
+		return false
+	}
+	if rows.Next() {
+		databaseCall = true
+	}
+	rows.Close()
+	return databaseCall
+}
+func register(db *sql.DB, name string, hash string) bool {
+	rows, err := db.Query("SELECT name FROM users WHERE name=? AND hash=?", name, hash)
+	databaseCall := false
+	if err != nil {
+		fmt.Print(err)
+		return false
+	}
+	if rows.Next() {
+		return false
+	}
+	rows.Close()
+	rows, err = db.Query("INSERT INTO users (name,hash,game_list) VALUES(?,?,?)", name, hash, "")
+	if err != nil {
+		return false
+	}
+	rows.Close()
 	return databaseCall
 }
 
@@ -173,8 +237,61 @@ func getGameState(id string, gameList []*gamestate) *gamestate {
 	}
 	return nil
 }
+func getInitialStocks() []*stock {
+	stocks := []*stock{}
+
+	r := csv.NewReader(strings.NewReader(initial_stocks))
+	records, err := r.ReadAll()
+	if err != nil {
+		log.Fatalln("Error reading from csv file", err)
+	}
+	for index := 0; index < len(records); index++ {
+		name := records[index][0]
+		price, _ := strconv.Atoi(records[index][1])
+		outlook, _ := strconv.Atoi(records[index][2])
+		b := false
+		if outlook > 1 {
+			b = true
+		}
+		s := stock{
+			name,
+			price,
+			0,
+			0,
+			b,
+		}
+		stocks = append(stocks, &s)
+	}
+	return stocks
+}
+func initialzeGame(games []*gamestate, user *player, gameID string) {
+	stocks := getInitialStocks()
+	players := []*player{user}
+	newGame := gamestate{
+		gameID,
+		players,
+		stocks,
+	}
+	games = append(games, &newGame)
+}
 
 func main() {
+	getInitialStocks()
+	sqlURL, exists := os.LookupEnv("SQL_STRING")
+	if !exists {
+		fmt.Print("Environment Variable not set")
+		return
+	}
+	db, err := sql.Open("mysql", sqlURL)
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+	err = db.Ping()
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
 	corn := stock{
 		"corn",
 		5000,
@@ -205,6 +322,7 @@ func main() {
 		false,
 		"dsad",
 		port,
+		100000,
 	}
 	plays := []*player{&nick}
 	stocks := []*stock{&egg, &corn}
@@ -212,7 +330,6 @@ func main() {
 		"23",
 		plays,
 		stocks,
-		23,
 	}
 	gamelist := []*gamestate{&game}
 	go waitAndUpdate(gamelist)
@@ -222,8 +339,10 @@ func main() {
 	})
 	r.HandleFunc("/register/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
-		fmt.Printf(vars["name"])
-		// Write to Database
+		name := vars["name"]
+		hash := vars["passHash"]
+		register(db, name, hash)
+		fmt.Fprintf(w, "Success")
 
 	})
 	r.HandleFunc("/login/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
@@ -231,7 +350,7 @@ func main() {
 		name := vars["name"]
 		hash := vars["passHash"]
 		// Check database if username/password hash exists. Send different error mesages for different cases.
-		if authLogin(name, hash) {
+		if authLogin(db, name, hash) {
 			fmt.Fprintf(w, "Success")
 		} else {
 			http.Error(w, "Forbidden", http.StatusForbidden)
@@ -247,7 +366,7 @@ func main() {
 		currGame := getGameState(gameID, gamelist)
 		if currGame == nil {
 			http.Error(w, "No Such Game", http.StatusNotFound)
-		} else if !authLogin(name, hash) {
+		} else if !authLogin(db, name, hash) {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		} else {
 			//Check if User exists in game
@@ -268,12 +387,36 @@ func main() {
 		currGame := getGameState(gameID, gamelist)
 		if currGame == nil {
 			http.Error(w, "No Such Game", http.StatusNotFound)
-		} else if !authLogin(name, hash) {
+		} else if !authLogin(db, name, hash) {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		} else {
 			//Check if User exists in game
 			fmt.Fprint(w, "Status")
 
+		}
+	})
+	// Creates game, adds to gamelist, adds to user's game list
+	r.HandleFunc("/game/{gameID}/create/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		name := vars["name"]
+		hash := vars["passHash"]
+		gameID := vars["gameID"]
+		if !authLogin(db, name, hash) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		} else {
+			for _, g := range gamelist {
+				if g.gameID == gameID {
+					http.Error(w, "Game Already Exists with ID"+gameID, http.StatusConflict)
+					return
+				}
+			}
+			initialzeGame(gamelist, &player{
+				name,
+				false,
+				hash,
+				[]*dividend{},
+				startingCents,
+			}, gameID)
 		}
 	})
 	r.HandleFunc("/game/{gameID}/getStockStatus/{name}-{passHash}-{stockName}", func(w http.ResponseWriter, r *http.Request) {
@@ -286,7 +429,7 @@ func main() {
 		currGame := getGameState(gameID, gamelist)
 		if currGame == nil {
 			http.Error(w, "No Such Game", http.StatusNotFound)
-		} else if !authLogin(name, hash) {
+		} else if !authLogin(db, name, hash) {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		} else {
 			//Check if User exists in game

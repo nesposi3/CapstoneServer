@@ -410,7 +410,7 @@ func main() {
 		} else {
 			for _, g := range gamelist {
 				if g.gameID == gameID {
-					http.Error(w, "Game Already Exists with ID"+gameID, http.StatusConflict)
+					http.Error(w, "Game Already Exists with ID "+gameID, http.StatusConflict)
 					return
 				}
 			}
@@ -422,6 +422,7 @@ func main() {
 				startingCents,
 			}, gameID)
 			gamelist = newList
+			fmt.Fprintf(w, "Game %s created", gameID)
 		}
 	})
 	r.HandleFunc("/game/{gameID}/getStockStatus/{name}-{passHash}-{stockName}", func(w http.ResponseWriter, r *http.Request) {

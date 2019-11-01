@@ -49,44 +49,44 @@ const startingCents = 1000000
 var gamelist = []*gamestate{}
 
 type dividend struct {
-	boughtStock *stock
-	name        string
-	numShares   int
+	BoughtStock *stock
+	Name        string
+	NumShares   int
 }
 
 type player struct {
-	name         string
-	deleted      bool
+	Name         string
+	Deleted      bool
 	passwordHash string
-	portfolio    []*dividend
-	totalCash    int
+	Portfolio    []*dividend
+	TotalCash    int
 }
 type gamestate struct {
-	gameID  string
-	players []*player
-	stocks  []*stock
+	GameID  string
+	Players []*player
+	Stocks  []*stock
 }
 
 //Prices in integer cents to avoid floating point comparisons etc.
 type stock struct {
-	name              string
-	price             int
-	numShares         int
-	previousNumShares int
-	trend             bool
+	Name              string
+	Price             int
+	NumShares         int
+	PreviousNumShares int
+	Trend             bool
 }
 
 // Returns an int representing the total value of a player's portfoilio
 func (p *player) getAccountBalance() int {
 	var bal = 0
-	for _, d := range p.portfolio {
-		bal = bal + (d.numShares * (d.boughtStock.price))
+	for _, d := range p.Portfolio {
+		bal = bal + (d.NumShares * (d.BoughtStock.Price))
 	}
 	return bal
 }
 func (p *player) ownsStock(s stock) (bool, int) {
-	for i, d := range p.portfolio {
-		if d.boughtStock.equals(s) {
+	for i, d := range p.Portfolio {
+		if d.BoughtStock.equals(s) {
 			return true, i
 		}
 	}
@@ -97,43 +97,43 @@ func (p *player) ownsStock(s stock) (bool, int) {
 func (p *player) getStockInfo(s stock) (int, int) {
 	owns, index := p.ownsStock(s)
 	if owns {
-		return p.portfolio[index].numShares, p.portfolio[index].boughtStock.price
+		return p.Portfolio[index].NumShares, p.Portfolio[index].BoughtStock.Price
 	}
 	return -1, -1
 }
 
 // Directly changes the price of a stock
 func (s *stock) changePrice(price int) {
-	s.price = price
+	s.Price = price
 }
 
 // Change the price by change/1000
 func (s *stock) changePriceByPermill(change int) {
-	changeInPrice := int(math.Round(float64(s.price) * (float64(change) / 1000.0)))
-	newPrice := s.price + changeInPrice
+	changeInPrice := int(math.Round(float64(s.Price) * (float64(change) / 1000.0)))
+	newPrice := s.Price + changeInPrice
 	s.changePrice(newPrice)
 }
 
 //Directly changes the name of a stock
 func (s *stock) changeName(name string) {
-	s.name = name
+	s.Name = name
 }
 
 //Directly changes the number of shares of a stock
 func (s *stock) changeShares(shares int) {
-	s.numShares = shares
+	s.NumShares = shares
 }
 
 // TODO Adjust numbers
 func (s *stock) statisticalUpdate() {
 	//old := s.price
 	// First phase of stock adjustment, if huge change in shares bought, price changes. Change ratio in perMille
-	changeRatio := int(((float64(s.numShares) - float64(s.previousNumShares)) / float64(s.numShares)) * 1000)
+	changeRatio := int(((float64(s.NumShares) - float64(s.PreviousNumShares)) / float64(s.NumShares)) * 1000)
 	s.changePriceByPermill(changeRatio)
 	// Second phase, semi-random adjustment
 	num := rand.Intn(1000)
 	sign := 1
-	if !s.trend {
+	if !s.Trend {
 		sign = -1
 	}
 	// 90% chance we do nothing drastic, 1% change
@@ -146,21 +146,21 @@ func (s *stock) statisticalUpdate() {
 		s.changePriceByPermill(changePerMill)
 	} else if num > 950 && num < 1001 {
 		// Change the trend of the stock
-		s.trend = !s.trend
+		s.Trend = !s.Trend
 	}
 	//fmt.Printf("%s: %d old %d new\n", s.name, old, s.price)
 
 }
 func (s *stock) equals(other stock) bool {
-	return (s.name == other.name)
+	return (s.Name == other.Name)
 }
 
 //Adds a player to the game
 func (game *gamestate) addPlayer(newPlayer *player) {
-	game.players = append(game.players, newPlayer)
+	game.Players = append(game.Players, newPlayer)
 }
 func (game *gamestate) updateStocks() {
-	for _, s := range game.stocks {
+	for _, s := range game.Stocks {
 		s.statisticalUpdate()
 	}
 }
@@ -170,7 +170,7 @@ func waitAndUpdate() {
 		time.Sleep(3 * time.Second)
 		for _, game := range gamelist {
 			game.updateStocks()
-			fmt.Println(game.gameID)
+			fmt.Println(game.GameID)
 		}
 	}
 
@@ -178,9 +178,9 @@ func waitAndUpdate() {
 
 //Sets a player to deleted state
 func (game *gamestate) removePlayer(oldPlayer player) {
-	for _, p := range game.players {
-		if p.name == oldPlayer.name {
-			p.deleted = true
+	for _, p := range game.Players {
+		if p.Name == oldPlayer.Name {
+			p.Deleted = true
 		}
 	}
 }
@@ -221,8 +221,8 @@ func register(db *sql.DB, name string, hash string) bool {
 func (game *gamestate) getNum() (int, int) {
 	var i = 0
 	var j = 0
-	for _, p := range game.players {
-		if !p.deleted {
+	for _, p := range game.Players {
+		if !p.Deleted {
 			i = i + 1
 		} else {
 			j = j + 1
@@ -234,7 +234,7 @@ func (game *gamestate) getNum() (int, int) {
 // Gets the correct gamestate pointer from a list of gamestates based on gameID
 func getGameState(id string, gameList []*gamestate) *gamestate {
 	for _, game := range gameList {
-		if game.gameID == id {
+		if game.GameID == id {
 			return game
 		}
 	}
@@ -409,7 +409,7 @@ func main() {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		} else {
 			for _, g := range gamelist {
-				if g.gameID == gameID {
+				if g.GameID == gameID {
 					http.Error(w, "Game Already Exists with ID "+gameID, http.StatusConflict)
 					return
 				}

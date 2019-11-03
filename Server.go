@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -26,6 +27,26 @@ func main() {
 	if err != nil {
 		fmt.Print(err)
 		return
+	}
+	rows, err := db.Query("SELECT game_state FROM games")
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+	var state string
+	var game *gamestate
+	for rows.Next() {
+		err := rows.Scan(&state)
+		if err != nil {
+			fmt.Print(err)
+			return
+		}
+		err = json.Unmarshal([]byte(state), &game)
+		if err != nil {
+			fmt.Print(err)
+			return
+		}
+		gamelist = append(gamelist, game)
 	}
 	go waitAndUpdate(db)
 	r := mux.NewRouter()

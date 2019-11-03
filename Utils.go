@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -26,9 +27,11 @@ type player struct {
 	TotalCash    int
 }
 type gamestate struct {
-	GameID  string
-	Players []*player
-	Stocks  []*stock
+	GameID    string
+	Players   []*player
+	Stocks    []*stock
+	ticksLeft int
+	done      bool
 }
 
 //Prices in integer cents to avoid floating point comparisons etc.
@@ -90,10 +93,11 @@ func (s *stock) changeShares(shares int) {
 
 // TODO Adjust numbers
 func (s *stock) statisticalUpdate() {
-	//old := s.price
 	// First phase of stock adjustment, if huge change in shares bought, price changes. Change ratio in perMille
-	changeRatio := int(((float64(s.NumShares) - float64(s.PreviousNumShares)) / float64(s.NumShares)) * 1000)
-	s.changePriceByPermill(changeRatio)
+	if s.NumShares != 0 {
+		changeRatio := int(((float64(s.NumShares) - float64(s.PreviousNumShares)) / float64(s.NumShares)) * 1000)
+		s.changePriceByPermill(changeRatio)
+	}
 	// Second phase, semi-random adjustment
 	num := rand.Intn(1000)
 	sign := 1
@@ -127,12 +131,30 @@ func (game *gamestate) updateStocks() {
 		s.statisticalUpdate()
 	}
 }
-func waitAndUpdate() {
-	//TODO every iteration updates db
+func (game *gamestate) updateGamestateInDatabase(db *sql.DB) {
+	obj, err := json.Marshal(game)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	s := string(obj)
+	_, err = db.Query("INSERT INTO games (game_id, game_state) VALUES(?,?) ON DUPLICATE KEY UPDATE game_id=?, game_state=?", game.GameID, s, game.GameID, s)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
+func waitAndUpdate(db *sql.DB) {
 	for {
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Minute)
 		for _, game := range gamelist {
-			game.updateStocks()
+			if game.ticksLeft == 0 {
+				game.done = true
+			} else {
+				game.ticksLeft--
+				game.updateStocks()
+			}
+			game.updateGamestateInDatabase(db)
 		}
 	}
 
@@ -192,6 +214,84 @@ func (game *gamestate) getNum() (int, int) {
 	}
 	return i, j
 }
+func (game *gamestate) checkPlayerExists(name string) bool {
+	for _, p := range game.Players {
+		if p.Name == name && !p.Deleted {
+			return true
+		}
+	}
+	return false
+}
+func (game *gamestate) checkStockExists(name string) bool {
+	for _, s := range game.Stocks {
+		if s.Name == name {
+			return true
+		}
+	}
+	return false
+}
+func (game *gamestate) buyStock(userName string, stockName string, numShares int) bool {
+	var play *player = nil
+	var stock *stock = nil
+	for _, p := range game.Players {
+		if p.Name == userName && !p.Deleted {
+			play = p
+		}
+	}
+	for _, s := range game.Stocks {
+		if s.Name == stockName {
+			stock = s
+		}
+	}
+	if numShares*stock.Price > play.TotalCash {
+		// Player cannot afford to buy that stock
+		return false
+	}
+	stock.NumShares += numShares
+	owns, i := play.ownsStock(*stock)
+	if owns {
+		play.Portfolio[i].BoughtStock = stock
+		play.Portfolio[i].NumShares += numShares
+		play.TotalCash -= (numShares * stock.Price)
+	} else {
+		div := dividend{
+			stock,
+			stock.Name,
+			numShares,
+		}
+		play.Portfolio = append(play.Portfolio, &div)
+		play.TotalCash -= (numShares * stock.Price)
+	}
+	return true
+}
+func (game *gamestate) sellStock(userName string, stockName string, numShares int) bool {
+	var play *player = nil
+	var stock *stock = nil
+	for _, p := range game.Players {
+		if p.Name == userName && !p.Deleted {
+			play = p
+		}
+	}
+	for _, s := range game.Stocks {
+		if s.Name == stockName {
+			stock = s
+		}
+	}
+	owns, i := play.ownsStock(*stock)
+	if owns {
+		if stock.NumShares < numShares || play.Portfolio[i].NumShares < numShares {
+			// If there are not enough shares to sell
+			return false
+		}
+		stock.NumShares -= numShares
+		play.Portfolio[i].BoughtStock = stock
+		play.Portfolio[i].NumShares -= numShares
+		play.TotalCash += (numShares * stock.Price)
+	} else {
+		return false
+	}
+	return true
+}
 
 // Gets the correct gamestate pointer from a list of gamestates based on gameID
 func getGameState(id string, gameList []*gamestate) *gamestate {
@@ -236,6 +336,8 @@ func initialzeGame(games []*gamestate, user *player, gameID string) []*gamestate
 		gameID,
 		players,
 		stocks,
+		totalTicks,
+		false,
 	}
 	games = append(games, &newGame)
 	return games

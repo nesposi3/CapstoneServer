@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
@@ -26,48 +27,7 @@ func main() {
 		fmt.Print(err)
 		return
 	}
-
-	corn := stock{
-		"corn",
-		5000,
-		500,
-		500,
-		true,
-	}
-	egg := stock{
-		"egg",
-		25943,
-		5000,
-		4500,
-		false,
-	}
-	p1 := dividend{
-		&corn,
-		"corn",
-		67,
-	}
-	p2 := dividend{
-		&egg,
-		"egg",
-		500,
-	}
-	port := []*dividend{&p1, &p2}
-	nick := player{
-		"nick",
-		false,
-		"dsad",
-		port,
-		100000,
-	}
-	plays := []*player{&nick}
-	stocks := []*stock{&egg, &corn}
-	game := gamestate{
-		"23",
-		plays,
-		stocks,
-	}
-	gamelist = append(gamelist, &game)
-	go waitAndUpdate()
+	go waitAndUpdate(db)
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Welcome")
@@ -98,19 +58,32 @@ func main() {
 		gameID := vars["gameID"]
 		// True for buy, false for sell
 		buyOrSell := (vars["buyOrSell"] == "buy")
+		stockName := vars["stockName"]
+		numShares, _ := strconv.Atoi(vars["numShares"])
 		currGame := getGameState(gameID, gamelist)
 		if currGame == nil {
 			http.Error(w, "No Such Game", http.StatusNotFound)
 		} else if !authLogin(db, name, hash) {
-			http.Error(w, "Forbidden", http.StatusForbidden)
+			http.Error(w, "Forbidden, Login Failed", http.StatusForbidden)
 		} else {
 			//Check if User exists in game
-			if buyOrSell {
-				fmt.Fprintf(w, "Buy")
+			if currGame.checkPlayerExists(name) {
+				if buyOrSell {
+					if currGame.buyStock(name, stockName, numShares) {
+						fmt.Fprintf(w, "Bought %d shares of stock %s", numShares, stockName)
+					} else {
+						http.Error(w, "Forbidden, not enough money to buy stock", http.StatusForbidden)
+					}
+				} else {
+					if currGame.sellStock(name, stockName, numShares) {
+						fmt.Fprintf(w, "Sold %d shares of stock %s", numShares, stockName)
+					} else {
+						http.Error(w, "Forbidden, not enough shares to sell", http.StatusForbidden)
+					}
+				}
 			} else {
-				fmt.Fprintf(w, "Sell")
+				http.Error(w, "Forbidden, user does not exist in game", http.StatusForbidden)
 			}
-
 		}
 	})
 	// Get status of all gamestate

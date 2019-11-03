@@ -28,5 +28,7 @@ Sail air,811,1`
 
 //Global values
 const startingCents = 1000000
+const numDays = 5
+const totalTicks = numDays * 24 * 60
 
 var gamelist = []*gamestate{}

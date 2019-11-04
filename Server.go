@@ -121,7 +121,12 @@ func main() {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		} else {
 			//Check if User exists in game
-			fmt.Fprint(w, "Status")
+			if currGame.checkPlayerExists(name) {
+				j, _ := json.Marshal(currGame)
+				w.Write(j)
+			} else {
+				http.Error(w, "Forbidden, user does not exist in game", http.StatusForbidden)
+			}
 
 		}
 	})
@@ -149,24 +154,6 @@ func main() {
 			}, gameID)
 			gamelist = newList
 			fmt.Fprintf(w, "Game %s created", gameID)
-		}
-	})
-	r.HandleFunc("/game/{gameID}/getStockStatus/{name}-{passHash}-{stockName}", func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		name := vars["name"]
-		hash := vars["passHash"]
-		gameID := vars["gameID"]
-		stockName := vars["stockName"]
-
-		currGame := getGameState(gameID, gamelist)
-		if currGame == nil {
-			http.Error(w, "No Such Game", http.StatusNotFound)
-		} else if !authLogin(sqlURL, name, hash) {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-		} else {
-			//Check if User exists in game
-			fmt.Fprintf(w, "Status of %s", stockName)
-
 		}
 	})
 

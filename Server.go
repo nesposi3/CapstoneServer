@@ -48,7 +48,8 @@ func main() {
 		}
 		gamelist = append(gamelist, game)
 	}
-	go waitAndUpdate(db)
+	db.Close()
+	go waitAndUpdate(sqlURL)
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Welcome")
@@ -57,7 +58,7 @@ func main() {
 		vars := mux.Vars(r)
 		name := vars["name"]
 		hash := vars["passHash"]
-		register(db, name, hash)
+		register(sqlURL, name, hash)
 		fmt.Fprintf(w, "Success")
 
 	})
@@ -66,7 +67,7 @@ func main() {
 		name := vars["name"]
 		hash := vars["passHash"]
 		// Check database if username/password hash exists. Send different error mesages for different cases.
-		if authLogin(db, name, hash) {
+		if authLogin(sqlURL, name, hash) {
 			fmt.Fprintf(w, "Success")
 		} else {
 			http.Error(w, "Forbidden", http.StatusForbidden)
@@ -84,7 +85,7 @@ func main() {
 		currGame := getGameState(gameID, gamelist)
 		if currGame == nil {
 			http.Error(w, "No Such Game", http.StatusNotFound)
-		} else if !authLogin(db, name, hash) {
+		} else if !authLogin(sqlURL, name, hash) {
 			http.Error(w, "Forbidden, Login Failed", http.StatusForbidden)
 		} else {
 			//Check if User exists in game
@@ -116,7 +117,7 @@ func main() {
 		currGame := getGameState(gameID, gamelist)
 		if currGame == nil {
 			http.Error(w, "No Such Game", http.StatusNotFound)
-		} else if !authLogin(db, name, hash) {
+		} else if !authLogin(sqlURL, name, hash) {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		} else {
 			//Check if User exists in game
@@ -130,7 +131,7 @@ func main() {
 		name := vars["name"]
 		hash := vars["passHash"]
 		gameID := vars["gameID"]
-		if !authLogin(db, name, hash) {
+		if !authLogin(sqlURL, name, hash) {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		} else {
 			for _, g := range gamelist {
@@ -160,7 +161,7 @@ func main() {
 		currGame := getGameState(gameID, gamelist)
 		if currGame == nil {
 			http.Error(w, "No Such Game", http.StatusNotFound)
-		} else if !authLogin(db, name, hash) {
+		} else if !authLogin(sqlURL, name, hash) {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		} else {
 			//Check if User exists in game

@@ -144,10 +144,11 @@ func (game *gamestate) updateGamestateInDatabase(db *sql.DB) {
 		return
 	}
 }
-func waitAndUpdate(db *sql.DB) {
+func waitAndUpdate(sqlURL string) {
 	for {
 		time.Sleep(1 * time.Minute)
 		for _, game := range gamelist {
+			db, _ := sql.Open("mysql", sqlURL)
 			if game.ticksLeft == 0 {
 				game.done = true
 			} else {
@@ -155,6 +156,7 @@ func waitAndUpdate(db *sql.DB) {
 				game.updateStocks()
 			}
 			game.updateGamestateInDatabase(db)
+			db.Close()
 		}
 	}
 
@@ -168,9 +170,11 @@ func (game *gamestate) removePlayer(oldPlayer player) {
 		}
 	}
 }
-func authLogin(db *sql.DB, name string, hash string) bool {
+func authLogin(sqlURL string, name string, hash string) bool {
 	//Database call here
+	db, _ := sql.Open("mysql", sqlURL)
 	rows, err := db.Query("SELECT name FROM users WHERE name=? AND hash=?", name, hash)
+	db.Close()
 	databaseCall := false
 	if err != nil {
 		fmt.Print(err)
@@ -182,22 +186,27 @@ func authLogin(db *sql.DB, name string, hash string) bool {
 	rows.Close()
 	return databaseCall
 }
-func register(db *sql.DB, name string, hash string) bool {
+func register(sqlURL string, name string, hash string) bool {
+	db, _ := sql.Open("mysql", sqlURL)
 	rows, err := db.Query("SELECT name FROM users WHERE name=? AND hash=?", name, hash)
 	databaseCall := false
 	if err != nil {
 		fmt.Print(err)
+		db.Close()
 		return false
 	}
 	if rows.Next() {
+		db.Close()
 		return false
 	}
 	rows.Close()
 	rows, err = db.Query("INSERT INTO users (name,hash,game_list) VALUES(?,?,?)", name, hash, "")
 	if err != nil {
+		db.Close()
 		return false
 	}
 	rows.Close()
+	db.Close()
 	return databaseCall
 }
 

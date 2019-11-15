@@ -108,6 +108,23 @@ func main() {
 			}
 		}
 	})
+	r.HandleFunc("/allGames/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		name := vars["name"]
+		hash := vars["passHash"]
+		list := []*gamestate{}
+		// Check database if username/password hash exists. Send different error mesages for different cases.
+		if authLogin(sqlURL, name, hash) {
+			for _, g := range gamelist {
+				g.checkPlayerExists(name)
+				list = append(list, g)
+			}
+			j, _ := json.Marshal(list)
+			w.Write(j)
+		} else {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		}
+	})
 	// Get status of all gamestate
 	r.HandleFunc("/game/{gameID}/getGameStatus/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
@@ -130,6 +147,7 @@ func main() {
 
 		}
 	})
+
 	// Creates game, adds to gamelist, adds to user's game list
 	r.HandleFunc("/game/{gameID}/create/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)

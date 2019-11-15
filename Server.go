@@ -174,6 +174,31 @@ func main() {
 			fmt.Fprintf(w, "Game %s created", gameID)
 		}
 	})
+	// Creates game, adds to gamelist, adds to user's game list
+	r.HandleFunc("/game/{gameID}/join/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		name := vars["name"]
+		hash := vars["passHash"]
+		gameID := vars["gameID"]
+		if !authLogin(sqlURL, name, hash) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		} else {
+			for _, g := range gamelist {
+				if g.GameID == gameID {
+					g.addPlayer(&player{
+						name,
+						false,
+						hash,
+						[]*dividend{},
+						startingCents,
+					})
+					j, _ := json.Marshal(g)
+					w.Write(j)
+				}
+			}
+			http.Error(w, "Game does not exist", http.StatusNotFound)
+		}
+	})
 
 	http.Handle("/", r)
 	http.ListenAndServe(":8090", nil)

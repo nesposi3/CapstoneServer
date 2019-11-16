@@ -138,7 +138,9 @@ func (game *gamestate) updateGamestateInDatabase(db *sql.DB) {
 		return
 	}
 	s := string(obj)
-	_, err = db.Query("INSERT INTO games (game_id, game_state) VALUES(?,?) ON DUPLICATE KEY UPDATE game_id=?, game_state=?", game.GameID, s, game.GameID, s)
+	rows, err := db.Query("INSERT INTO games (game_id, game_state) VALUES(?,?) ON DUPLICATE KEY UPDATE game_id=?, game_state=?", game.GameID, s, game.GameID, s)
+	rows.Close()
+	db.Close()
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -30,8 +30,8 @@ type gamestate struct {
 	GameID    string
 	Players   []*player
 	Stocks    []*stock
-	ticksLeft int
-	done      bool
+	TicksLeft int
+	Done      bool
 }
 
 //Prices in integer cents to avoid floating point comparisons etc.
@@ -149,10 +149,10 @@ func waitAndUpdate(sqlURL string) {
 		time.Sleep(1 * time.Minute)
 		for _, game := range gamelist {
 			db, _ := sql.Open("mysql", sqlURL)
-			if game.ticksLeft == 0 {
-				game.done = true
+			if game.TicksLeft == 0 {
+				game.Done = true
 			} else {
-				game.ticksLeft--
+				game.TicksLeft--
 				game.updateStocks()
 			}
 			game.updateGamestateInDatabase(db)

@@ -190,19 +190,16 @@ func authLogin(sqlURL string, name string, hash string) bool {
 }
 func register(sqlURL string, name string, hash string) bool {
 	db, _ := sql.Open("mysql", sqlURL)
-	rows, err := db.Query("SELECT name FROM users WHERE name=? AND hash=?", name, hash)
-	databaseCall := false
+	var scanName string
+	row := db.QueryRow("SELECT name FROM users WHERE name=? AND hash=?", name, hash)
+	err := row.Scan(&scanName)
+	databaseCall := true
 	if err != nil {
 		fmt.Print(err)
 		db.Close()
 		return false
 	}
-	if rows.Next() {
-		db.Close()
-		return false
-	}
-	rows.Close()
-	rows, err = db.Query("INSERT INTO users (name,hash,game_list) VALUES(?,?,?)", name, hash, "")
+	rows, err := db.Query("INSERT INTO users (name,hash,game_list) VALUES(?,?,?)", name, hash, "")
 	if err != nil {
 		db.Close()
 		return false
@@ -227,6 +224,7 @@ func (game *gamestate) getNum() (int, int) {
 }
 func (game *gamestate) checkPlayerExists(name string) bool {
 	for _, p := range game.Players {
+		fmt.Println(p.Name + " " + name)
 		if p.Name == name && !p.Deleted {
 			return true
 		}

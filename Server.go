@@ -119,6 +119,7 @@ func main() {
 		// Check database if username/password hash exists. Send different error mesages for different cases.
 		if authLogin(sqlURL, name, hash) {
 			for _, g := range gamelist {
+				fmt.Println(g.GameID)
 				if g.checkPlayerExists(name) {
 					list = append(list, g)
 				}

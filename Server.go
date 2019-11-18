@@ -58,8 +58,11 @@ func main() {
 		vars := mux.Vars(r)
 		name := vars["name"]
 		hash := vars["passHash"]
-		register(sqlURL, name, hash)
-		fmt.Fprintf(w, "Success")
+		if register(sqlURL, name, hash) {
+			fmt.Fprintf(w, "Success")
+		} else {
+			http.Error(w, "User Already exists", http.StatusConflict)
+		}
 
 	})
 	r.HandleFunc("/login/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {

@@ -186,6 +186,10 @@ func main() {
 		} else {
 			for _, g := range gamelist {
 				if g.GameID == gameID {
+					if g.checkPlayerExists(name) {
+						http.Error(w, "Player Lready Exists", http.StatusConflict)
+						return
+					}
 					g.addPlayer(&player{
 						name,
 						false,

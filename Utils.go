@@ -194,8 +194,7 @@ func register(sqlURL string, name string, hash string) bool {
 	row := db.QueryRow("SELECT name FROM users WHERE name=? AND hash=?", name, hash)
 	err := row.Scan(&scanName)
 	databaseCall := true
-	if err != nil {
-		fmt.Print(err)
+	if err == nil {
 		db.Close()
 		return false
 	}

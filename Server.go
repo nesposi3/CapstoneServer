@@ -1,54 +1,45 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
-	sqlURL, exists := os.LookupEnv("SQL_STRING")
+	sqlURL, exists := os.LookupEnv("MONGO_URL")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(sqlURL))
+	if err != nil {
+		log.Fatal(err)
+	}
+	clientOptions := options.Client().ApplyURI(sqlURL)
 	if !exists {
 		fmt.Print("Environment Variable not set")
 		return
 	}
-	db, err := sql.Open("mysql", sqlURL)
+	client, err = mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
-		fmt.Print(err)
+		log.Fatal(err)
 		return
 	}
-	err = db.Ping()
+	err = client.Ping(context.TODO(), nil)
+
 	if err != nil {
-		fmt.Print(err)
-		return
+		log.Fatal(err)
 	}
-	rows, err := db.Query("SELECT game_state FROM games")
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
-	var state string
-	var game *gamestate
-	for rows.Next() {
-		err := rows.Scan(&state)
-		if err != nil {
-			fmt.Print(err)
-			return
-		}
-		err = json.Unmarshal([]byte(state), &game)
-		if err != nil {
-			fmt.Print(err)
-			return
-		}
-		gamelist = append(gamelist, game)
-	}
-	db.Close()
+	fmt.Println("cpnnect")
 	go waitAndUpdate(sqlURL)
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

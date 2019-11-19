@@ -49,6 +49,7 @@ func main() {
 		gamelist = append(gamelist, game)
 	}
 	db.Close()
+	rows.Close()
 	go waitAndUpdate(sqlURL)
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

@@ -33,9 +33,9 @@ func main() {
 		fmt.Print(err)
 		return
 	}
-	var state string
-	var game *gamestate
 	for rows.Next() {
+		var game *gamestate
+		var state string
 		err := rows.Scan(&state)
 		if err != nil {
 			fmt.Print(err)

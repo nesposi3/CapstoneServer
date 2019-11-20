@@ -1,27 +1,27 @@
 package main
 
 const initial_stocks = `Cyclops Industries,31966,1
-Champion Intelligence,18803,1
-Voyage Technologies,6163,0
-Dwarf,52906,1
-Phenomenon Enterprises,46994,1
-White Wolf Sports,90973,1
-Surge Aviation,12540,0
-Turtle Co.,27772,0
-Greatechnolgies,15117,1
-Twisterecords,50189,1
-Prodintelligence,84983,0
-Solsticetems,30138,0
-Freacrosystems,62412,0
-Rootechnologies,23221,1
-Luckytronics,80268,1
-Aces,34272,1
-Nymph cast,25578,1
-Herb aid,70147,1
-Mountain stones,96694,1
-Vortex ex,96270,1
+Champion Intelligence,1880,1
+Voyage Technologies,616,0
+Dwarf,5290,1
+Phenomenon Enterprises,4699,1
+White Wolf Sports,9097,1
+Surge Aviation,1254,0
+Turtle Co.,2777,0
+Greatechnolgies,1511,1
+Twisterecords,5018,1
+Prodintelligence,8498,0
+Solsticetems,3013,0
+Freacrosystems,6241,0
+Rootechnologies,2322,1
+Luckytronics,8026,1
+Aces,3427,1
+Nymph cast,2557,1
+Herb aid,701,1
+Mountain stones,966,1
+Vortex ex,9627,1
 Ghost media,472,1
-Riddle fly,1314,0
+Riddle fly,131,0
 Globe mobile,1474,1
 Tulip bit,1073,1
 Sail air,811,1`

@@ -104,13 +104,13 @@ func (s *stock) statisticalUpdate() {
 	if !s.Trend {
 		sign = -1
 	}
-	// 90% chance we do nothing drastic, 1% change
+	// 90% chance we do nothing drastic, .1% change
 	if num < 901 {
-		changePerMill := sign * 10
+		changePerMill := sign * 1
 		s.changePriceByPermill(changePerMill)
 	} else if num > 900 && num < 951 {
-		// 5% chance we  have a big change, 10% change
-		changePerMill := sign * 100
+		// 5% chance we  have a big change, 1% change
+		changePerMill := sign * 10
 		s.changePriceByPermill(changePerMill)
 	} else if num > 950 && num < 1001 {
 		// Change the trend of the stock

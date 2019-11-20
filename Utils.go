@@ -138,7 +138,7 @@ func (game *gamestate) updateGamestateInDatabase(db *sql.DB) {
 		return
 	}
 	s := string(obj)
-	rows, err := db.Query("INSERT INTO games (game_id, game_state) VALUES(?,?) ON DUPLICATE KEY UPDATE game_id=?, game_state=?", game.GameID, s, game.GameID, s)
+	rows, err := db.Query("INSERT INTO games (game_id, game_state) VALUES(?,?) ON DUPLICATE KEY UPDATE game_id=?, game_state=?;", game.GameID, s, game.GameID, s)
 	rows.Close()
 	db.Close()
 	if err != nil {
@@ -175,7 +175,7 @@ func (game *gamestate) removePlayer(oldPlayer player) {
 func authLogin(sqlURL string, name string, hash string) bool {
 	//Database call here
 	db, _ := sql.Open("mysql", sqlURL)
-	rows, err := db.Query("SELECT name FROM users WHERE name=? AND hash=?", name, hash)
+	rows, err := db.Query("SELECT name FROM users WHERE name=? AND hash=?;", name, hash)
 	db.Close()
 	databaseCall := false
 	if err != nil {
@@ -191,14 +191,14 @@ func authLogin(sqlURL string, name string, hash string) bool {
 func register(sqlURL string, name string, hash string) bool {
 	db, _ := sql.Open("mysql", sqlURL)
 	var scanName string
-	row := db.QueryRow("SELECT name FROM users WHERE name=? AND hash=?", name, hash)
+	row := db.QueryRow("SELECT name FROM users WHERE name=? AND hash=?;", name, hash)
 	err := row.Scan(&scanName)
 	databaseCall := true
 	if err == nil {
 		db.Close()
 		return false
 	}
-	rows, err := db.Query("INSERT INTO users (name,hash,game_list) VALUES(?,?,?)", name, hash, "")
+	rows, err := db.Query("INSERT INTO users (name,hash,game_list) VALUES(?,?,?);", name, hash, "")
 	if err != nil {
 		db.Close()
 		return false

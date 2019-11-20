@@ -131,10 +131,17 @@ func (game *gamestate) updateStocks() {
 		s.statisticalUpdate()
 	}
 }
-func (game *gamestate) updateGamestateInDatabase(db *sql.DB) {
+func (game *gamestate) updateGamestateInDatabase(sqlURL string) {
+	db, err := sql.Open("mysql", sqlURL)
+	if err != nil {
+		fmt.Println(err)
+		db.Close()
+		return
+	}
 	obj, err := json.Marshal(game)
 	if err != nil {
 		fmt.Println(err)
+		db.Close()
 		return
 	}
 	s := string(obj)
@@ -150,15 +157,13 @@ func waitAndUpdate(sqlURL string) {
 	for {
 		time.Sleep(1 * time.Minute)
 		for _, game := range gamelist {
-			db, _ := sql.Open("mysql", sqlURL)
 			if game.TicksLeft == 0 {
 				game.Done = true
 			} else {
 				game.TicksLeft--
 				game.updateStocks()
 			}
-			game.updateGamestateInDatabase(db)
-			db.Close()
+			game.updateGamestateInDatabase(sqlURL)
 		}
 	}
 

@@ -95,7 +95,7 @@ func (s *stock) changeShares(shares int) {
 func (s *stock) statisticalUpdate() {
 	// First phase of stock adjustment, if huge change in shares bought, price changes. Change ratio in perMille
 	if s.NumShares != 0 {
-		changeRatio := int(((float64(s.NumShares) - float64(s.PreviousNumShares)) / float64(s.NumShares)) * 1000)
+		changeRatio := int(((float64(s.NumShares) - float64(s.PreviousNumShares)) / float64(s.NumShares) * 1000))
 		s.changePriceByPermill(changeRatio)
 	}
 	// Second phase, semi-random adjustment

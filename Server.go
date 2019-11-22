@@ -86,7 +86,7 @@ func main() {
 		buyOrSell := (vars["buyOrSell"] == "buy")
 		stockName := vars["stockName"]
 		numShares, _ := strconv.Atoi(vars["numShares"])
-		currGame := getGameState(gameID, gamelist)
+		currGame, _ := getGameState(gameID, gamelist)
 		if currGame == nil {
 			http.Error(w, "No Such Game", http.StatusNotFound)
 		} else if !authLogin(sqlURL, name, hash) {
@@ -137,7 +137,7 @@ func main() {
 		name := vars["name"]
 		hash := vars["passHash"]
 		gameID := vars["gameID"]
-		currGame := getGameState(gameID, gamelist)
+		currGame, _ := getGameState(gameID, gamelist)
 		if currGame == nil {
 			http.Error(w, "No Such Game", http.StatusNotFound)
 		} else if !authLogin(sqlURL, name, hash) {
@@ -146,6 +146,28 @@ func main() {
 			//Check if User exists in game
 			if currGame.checkPlayerExists(name) {
 				j, _ := json.Marshal(currGame)
+				w.Write(j)
+			} else {
+				http.Error(w, "Forbidden, user does not exist in game", http.StatusForbidden)
+			}
+
+		}
+	})
+	r.HandleFunc("/game/{gameID}/getGameHistory/{name}-{passHash}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		name := vars["name"]
+		hash := vars["passHash"]
+		gameID := vars["gameID"]
+		currGame, i := getGameState(gameID, gamelist)
+		if currGame == nil {
+			http.Error(w, "No Such Game", http.StatusNotFound)
+		} else if !authLogin(sqlURL, name, hash) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		} else {
+			//Check if User exists in game
+			if currGame.checkPlayerExists(name) {
+				// Get history of that game
+				j, _ := json.Marshal(historyQueue[i])
 				w.Write(j)
 			} else {
 				http.Error(w, "Forbidden, user does not exist in game", http.StatusForbidden)

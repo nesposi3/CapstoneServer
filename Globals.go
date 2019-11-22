@@ -32,3 +32,4 @@ const numDays = 5
 const totalTicks = numDays * 24 * 60
 
 var gamelist = []*gamestate{}
+var historyQueue = [][]*gamestate{}

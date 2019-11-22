@@ -156,7 +156,7 @@ func (game *gamestate) updateGamestateInDatabase(sqlURL string) {
 func waitAndUpdate(sqlURL string) {
 	for {
 		time.Sleep(1 * time.Minute)
-		for _, game := range gamelist {
+		for i, game := range gamelist {
 			if game.TicksLeft == 0 {
 				game.Done = true
 			} else {
@@ -164,9 +164,20 @@ func waitAndUpdate(sqlURL string) {
 				game.updateStocks()
 			}
 			game.updateGamestateInDatabase(sqlURL)
+
+			addHistory(game, i)
 		}
 	}
 
+}
+func addHistory(game *gamestate, index int) {
+	if len(historyQueue) <= index {
+		historyQueue = append(historyQueue, []*gamestate{})
+	}
+	if len(historyQueue[index]) == 60 {
+		historyQueue[index] = historyQueue[index][1:]
+	}
+	historyQueue[index] = append(historyQueue[index], game)
 }
 
 //Sets a player to deleted state
@@ -307,13 +318,13 @@ func (game *gamestate) sellStock(userName string, stockName string, numShares in
 }
 
 // Gets the correct gamestate pointer from a list of gamestates based on gameID
-func getGameState(id string, gameList []*gamestate) *gamestate {
-	for _, game := range gameList {
+func getGameState(id string, gameList []*gamestate) (*gamestate, int) {
+	for i, game := range gameList {
 		if game.GameID == id {
-			return game
+			return game, i
 		}
 	}
-	return nil
+	return nil, -1
 }
 func getInitialStocks() []*stock {
 	stocks := []*stock{}

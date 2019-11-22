@@ -176,6 +176,18 @@ func addHistory(game *gamestate, index int) {
 	if len(historyQueue[index]) == 60 {
 		historyQueue[index] = historyQueue[index][1:]
 	}
+	newStocks := []*stock{}
+	for _, s := range game.Stocks {
+		newStock := stock{
+			s.Name,
+			s.Price,
+			s.NumShares,
+			s.PreviousNumShares,
+			s.Trend,
+		}
+		newStocks = append(newStocks, &newStock)
+	}
+	game.Stocks = newStocks
 	historyQueue[index] = append(historyQueue[index], *game)
 }
 

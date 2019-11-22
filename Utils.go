@@ -164,7 +164,6 @@ func waitAndUpdate(sqlURL string) {
 				game.updateStocks()
 			}
 			game.updateGamestateInDatabase(sqlURL)
-
 			addHistory(game, i)
 		}
 	}
@@ -172,12 +171,12 @@ func waitAndUpdate(sqlURL string) {
 }
 func addHistory(game *gamestate, index int) {
 	if len(historyQueue) <= index {
-		historyQueue = append(historyQueue, []*gamestate{})
+		historyQueue = append(historyQueue, []gamestate{})
 	}
 	if len(historyQueue[index]) == 60 {
 		historyQueue[index] = historyQueue[index][1:]
 	}
-	historyQueue[index] = append(historyQueue[index], game)
+	historyQueue[index] = append(historyQueue[index], *game)
 }
 
 //Sets a player to deleted state

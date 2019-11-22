@@ -167,8 +167,13 @@ func main() {
 			//Check if User exists in game
 			if currGame.checkPlayerExists(name) {
 				// Get history of that game
-				j, _ := json.Marshal(historyQueue[i])
-				w.Write(j)
+				if len(historyQueue) > 0 {
+					j, _ := json.Marshal(historyQueue[i])
+					w.Write(j)
+				} else {
+					j, _ := json.Marshal([]*gamestate{})
+					w.Write(j)
+				}
 			} else {
 				http.Error(w, "Forbidden, user does not exist in game", http.StatusForbidden)
 			}
